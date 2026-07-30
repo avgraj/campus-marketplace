@@ -35,12 +35,19 @@ export default function ListingDetail() {
     };
   }, [id]);
 
-  // Contact seller via the bot (plan §8). Direct tg:// links are unreliable
-  // on mobile — routing through the bot ensures the user gets a working deep
-  // link inside a Telegram message, which always opens correctly.
-  const contactBotUrl = useMemo(() => {
-    if (!listing?.id) return null;
-    return `https://t.me/${import.meta.env.VITE_BOT_USERNAME || "cmpmarketplace_bot"}?start=contact_${listing.id}`;
+  const [msgCopied, setMsgCopied] = useState(false);
+  const [showMsg, setShowMsg] = useState(false);
+
+  const contact = useMemo(() => {
+    if (!listing?.seller?.telegram_username) return null;
+    const text = `Hi! I'm interested in your listing "${listing.title}" (${formatPrice(
+      listing.price
+    )}) on Campus Marketplace — is it still available?`;
+    return {
+      username: listing.seller.telegram_username,
+      text,
+      url: `https://t.me/${listing.seller.telegram_username}?text=${encodeURIComponent(text)}`,
+    };
   }, [listing]);
 
   if (error) {
@@ -174,20 +181,45 @@ export default function ListingDetail() {
             </button>
           </div>
         ) : user ? (
-          contactBotUrl ? (
-            <a
-              href={contactBotUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded bg-sky-500 px-5 py-2.5 font-medium text-white hover:bg-sky-600"
-            >
-              <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden>
-                <path d="M9.04 15.5 8.9 19c.4 0 .57-.17.78-.38l1.87-1.79 3.88 2.85c.71.4 1.22.2 1.4-.66L19.4 5.98c.23-1.04-.38-1.45-1.07-1.2L3.9 11.03c-1.02.4-1 .97-.17 1.23l3.7 1.15 8.59-5.4c.4-.27.78-.12.47.15l-6.45 5.83z" />
-              </svg>
-              Message seller on Telegram
-            </a>
+          contact ? (
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href={contact.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded bg-sky-500 px-5 py-2.5 font-medium text-white hover:bg-sky-600"
+                >
+                  <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden>
+                    <path d="M9.04 15.5 8.9 19c.4 0 .57-.17.78-.38l1.87-1.79 3.88 2.85c.71.4 1.22.2 1.4-.66L19.4 5.98c.23-1.04-.38-1.45-1.07-1.2L3.9 11.03c-1.02.4-1 .97-.17 1.23l3.7 1.15 8.59-5.4c.4-.27.78-.12.47.15l-6.45 5.83z" />
+                  </svg>
+                  Message @{contact.username}
+                </a>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(contact.text).catch(() => {});
+                    setMsgCopied(true);
+                    setTimeout(() => setMsgCopied(false), 3000);
+                  }}
+                  className="text-sm text-gray-500 underline hover:text-gray-700"
+                >
+                  {msgCopied ? "Copied!" : "Copy message"}
+                </button>
+              </div>
+              <button
+                onClick={() => setShowMsg((s) => !s)}
+                className="text-xs text-gray-400 hover:text-gray-600"
+              >
+                {showMsg ? "Hide" : "Show"} message
+              </button>
+              {showMsg && (
+                <p className="whitespace-pre-wrap rounded bg-gray-50 p-2 text-xs text-gray-600">
+                  {contact.text}
+                </p>
+              )}
+            </div>
           ) : (
-            <p className="text-sm text-gray-500">This seller can't be contacted right now.</p>
+            <p className="text-sm text-gray-500">This seller hasn't set a Telegram username.</p>
           )
         ) : (
           <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-900">
