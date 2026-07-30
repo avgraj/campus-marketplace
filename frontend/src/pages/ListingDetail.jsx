@@ -35,20 +35,33 @@ export default function ListingDetail() {
     };
   }, [id]);
 
-  // Telegram deep link with a prefilled message (plan §8). Use tg:// on
-  // mobile (opens native app directly) and https://t.me/ on desktop (opens in
-  // browser) — the t.me web page's "Send Message" button often breaks.
-  const telegramUrl = useMemo(() => {
+  const [copied, setCopied] = useState(false);
+
+  // Telegram contact (plan §8). Deep links are unreliable on mobile — try
+  // native app first, fall back to web, and copy username as a last resort.
+  const telegramContact = useMemo(() => {
     if (!listing?.seller?.telegram_username) return null;
     const text = `Hi! I'm interested in your listing "${listing.title}" (${formatPrice(
       listing.price
     )}) on Campus Marketplace — is it still available?`;
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (isMobile) {
-      return `tg://resolve?domain=${listing.seller.telegram_username}&text=${encodeURIComponent(text)}`;
-    }
-    return `https://t.me/${listing.seller.telegram_username}?text=${encodeURIComponent(text)}`;
+    return {
+      username: listing.seller.telegram_username,
+      text,
+      webUrl: `https://t.me/${listing.seller.telegram_username}?text=${encodeURIComponent(text)}`,
+      appUrl: `tg://resolve?domain=${listing.seller.telegram_username}&text=${encodeURIComponent(text)}`,
+    };
   }, [listing]);
+
+  const handleContact = () => {
+    if (!telegramContact) return;
+    navigator.clipboard.writeText(`@${telegramContact.username}`).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000);
+    window.location.href = telegramContact.appUrl;
+    setTimeout(() => {
+      window.open(telegramContact.webUrl, "_blank");
+    }, 800);
+  };
 
   if (error) {
     return <EmptyState title="Listing unavailable" message={error} />;
@@ -181,18 +194,21 @@ export default function ListingDetail() {
             </button>
           </div>
         ) : user ? (
-          telegramUrl ? (
-            <a
-              href={telegramUrl}
-              target={telegramUrl.startsWith("tg:") ? "_self" : "_blank"}
-              rel={telegramUrl.startsWith("tg:") ? "" : "noopener noreferrer"}
-              className="inline-flex items-center gap-2 rounded bg-sky-500 px-5 py-2.5 font-medium text-white hover:bg-sky-600"
-            >
-              <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden>
-                <path d="M9.04 15.5 8.9 19c.4 0 .57-.17.78-.38l1.87-1.79 3.88 2.85c.71.4 1.22.2 1.4-.66L19.4 5.98c.23-1.04-.38-1.45-1.07-1.2L3.9 11.03c-1.02.4-1 .97-.17 1.23l3.7 1.15 8.59-5.4c.4-.27.78-.12.47.15l-6.45 5.83z" />
-              </svg>
-              Message seller on Telegram
-            </a>
+          telegramContact ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleContact}
+                className="inline-flex items-center gap-2 rounded bg-sky-500 px-5 py-2.5 font-medium text-white hover:bg-sky-600"
+              >
+                <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden>
+                  <path d="M9.04 15.5 8.9 19c.4 0 .57-.17.78-.38l1.87-1.79 3.88 2.85c.71.4 1.22.2 1.4-.66L19.4 5.98c.23-1.04-.38-1.45-1.07-1.2L3.9 11.03c-1.02.4-1 .97-.17 1.23l3.7 1.15 8.59-5.4c.4-.27.78-.12.47.15l-6.45 5.83z" />
+                </svg>
+                Message seller on Telegram
+              </button>
+              {copied && (
+                <span className="text-xs text-green-600">Username copied to clipboard</span>
+              )}
+            </div>
           ) : (
             <p className="text-sm text-gray-500">This seller can't be contacted right now.</p>
           )
