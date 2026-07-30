@@ -170,3 +170,6 @@ class PublicConfigOut(BaseModel):
     community_name: str
     telegram_bot_username: str
     dev_mode: bool
+    # Exposed so we can debug CORS without shell access — it's the site's own
+    # public URL, visible in CORS response headers anyway.
+    frontend_origin: str

@@ -7,6 +7,7 @@ always win over file values.
 
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _env_candidates = [Path(".env"), Path("../.env")]
@@ -55,6 +56,12 @@ class Settings(BaseSettings):
 
     # Frontend origin for CORS.
     frontend_origin: str = "http://localhost:5173"
+
+    @field_validator("frontend_origin")
+    @classmethod
+    def strip_origin(cls, v: str) -> str:
+        # A stray space or trailing slash in the env var silently breaks CORS.
+        return v.strip().rstrip("/")
 
     # Dev mode enables a password-less dev login endpoint. NEVER true in prod.
     dev_mode: bool = False

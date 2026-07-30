@@ -79,6 +79,7 @@ def create_app() -> FastAPI:
             community_name=settings.community_name,
             telegram_bot_username=settings.telegram_bot_username,
             dev_mode=settings.dev_mode,
+            frontend_origin=settings.frontend_origin,
         )
 
     return app
