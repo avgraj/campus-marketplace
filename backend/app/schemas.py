@@ -73,7 +73,7 @@ class ListingCreate(BaseModel):
     @classmethod
     def urls_must_be_ours(cls, urls: list[str]) -> list[str]:
         for u in urls:
-            if not u.startswith("/uploads/"):
+            if not (u.startswith("/uploads/") or u.startswith("/image/")):
                 raise ValueError("image urls must come from POST /uploads/image")
         return urls
 
@@ -92,7 +92,7 @@ class ListingUpdate(BaseModel):
     def urls_must_be_ours(cls, urls: list[str] | None) -> list[str] | None:
         if urls:
             for u in urls:
-                if not u.startswith("/uploads/"):
+                if not (u.startswith("/uploads/") or u.startswith("/image/")):
                     raise ValueError("image urls must come from POST /uploads/image")
         return urls
 

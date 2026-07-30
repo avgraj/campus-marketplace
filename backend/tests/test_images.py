@@ -16,9 +16,9 @@ def test_upload_valid_image(client):
     )
     assert r.status_code == 200, r.text
     url = r.json()["url"]
-    assert url.startswith("/uploads/") and url.endswith(".webp")
+    assert url.startswith("/image/")
 
-    # The processed file is served back and is a real WebP
+    # The processed image is served back from the DB and is a real WebP
     served = client.get(url)
     assert served.status_code == 200
     img = Image.open(io.BytesIO(served.content))

@@ -16,6 +16,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    LargeBinary,
     Numeric,
     SmallInteger,
     String,
@@ -29,6 +30,16 @@ from .database import Base
 
 def utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+# Stores uploaded image bytes in the database so they survive ephemeral
+# filesystems (Render free tier wipes disk on every deploy).
+class ImageData(Base):
+    __tablename__ = "image_data"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
 class User(Base):
