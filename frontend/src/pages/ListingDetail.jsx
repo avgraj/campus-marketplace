@@ -54,7 +54,7 @@ export default function ListingDetail() {
 
   const handleContact = () => {
     if (!telegramContact) return;
-    navigator.clipboard.writeText(`@${telegramContact.username}`).catch(() => {});
+    navigator.clipboard.writeText(telegramContact.text).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
     window.location.href = telegramContact.appUrl;
@@ -206,7 +206,7 @@ export default function ListingDetail() {
                 Message seller on Telegram
               </button>
               {copied && (
-                <span className="text-xs text-green-600">Username copied to clipboard</span>
+                <span className="text-xs text-green-600">Message copied — paste it in Telegram</span>
               )}
             </div>
           ) : (
