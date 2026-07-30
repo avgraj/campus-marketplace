@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from app.config import settings
 from app.main import app
 
-from .conftest import CSRF, create_listing, dev_login, sign_telegram_payload, upload_image
+from .conftest import CSRF, create_listing, dev_login, upload_image
 
 
 def test_categories_seeded(client):
@@ -70,11 +70,21 @@ def test_contact_username_gated_behind_login(client):
     assert detail["seller"]["telegram_username"] == "seller-gated"
 
 
-def test_publish_requires_telegram_username(client, monkeypatch):
-    # A real Telegram account without a public @username (plan §7 edge case)
-    monkeypatch.setattr(settings, "telegram_bot_token", "123456:test-bot-token")
-    payload = sign_telegram_payload({"id": 777001, "first_name": "NoName"})
-    assert client.post("/auth/telegram/callback", json=payload).status_code == 200
+def test_publish_requires_telegram_username(client):
+    # A user without a public @username cannot publish (plan §7 edge case).
+    # Simulate by creating a user via the bot webhook with no username, then
+    # fabricating a session.
+    dev_login(client, "no-user")  # creates a user row with username set
+    from app.database import SessionLocal
+    from app.security import create_session
+    with SessionLocal() as db:
+        from app.models import User
+        from app.security import get_user_for_token
+        token = client.cookies.get("session", "")
+        user = get_user_for_token(db, token)
+        assert user is not None
+        user.telegram_username = None
+        db.commit()
 
     r = create_listing(client, title="Username Guard Test")
     assert r.status_code == 400

@@ -39,6 +39,13 @@ class Settings(BaseSettings):
     telegram_bot_token: str = ""
     telegram_bot_username: str = ""
     community_group_chat_id: str = ""
+    # Shared secret for the /telegram/webhook endpoint (setWebhook secret_token).
+    # When empty the header check is skipped — set it in production.
+    telegram_webhook_secret: str = ""
+
+    # OTP login
+    login_code_ttl_minutes: int = 10
+    login_code_max_attempts: int = 5
 
     # Database — SQLite by default so the project runs with zero setup;
     # set DATABASE_URL to Postgres in production.

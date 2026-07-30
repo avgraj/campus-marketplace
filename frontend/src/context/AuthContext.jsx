@@ -1,9 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { api } from "../api";
 
-// Holds the current user + public config and login/logout actions.
-// Context + hooks is enough state management at this scale (plan §10).
-
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
@@ -20,7 +17,7 @@ export function AuthProvider({ children }) {
       try {
         setConfig(await api.get("/config/public"));
       } catch {
-        /* backend unreachable — defaults shown */
+        /* backend unreachable */
       }
       try {
         setUser(await api.get("/auth/me"));
@@ -31,8 +28,12 @@ export function AuthProvider({ children }) {
     })();
   }, []);
 
-  const loginWithTelegram = useCallback(async (tgPayload) => {
-    const me = await api.post("/auth/telegram/callback", tgPayload);
+  const requestCode = useCallback(async (username) => {
+    await api.post("/auth/code/request", { username });
+  }, []);
+
+  const verifyCode = useCallback(async (username, code) => {
+    const me = await api.post("/auth/code/verify", { username, code });
     setUser(me);
     return me;
   }, []);
@@ -52,7 +53,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, config, loading, loginWithTelegram, devLogin, logout }}>
+    <AuthContext.Provider value={{ user, config, loading, requestCode, verifyCode, devLogin, logout }}>
       {children}
     </AuthContext.Provider>
   );

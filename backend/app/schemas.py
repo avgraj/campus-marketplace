@@ -13,16 +13,17 @@ PRICE_CAP = 1_000_000  # sane upper cap to catch typos (plan §6)
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
 
-class TelegramAuthPayload(BaseModel):
-    """Fields sent by the Telegram Login Widget. `hash` proves authenticity."""
+class CodeRequestIn(BaseModel):
+    """Step 1 of OTP login: the Telegram @username to send a code to."""
 
-    id: int
-    first_name: str
-    last_name: str | None = None
-    username: str | None = None
-    photo_url: str | None = None
-    auth_date: int
-    hash: str
+    username: str = Field(min_length=3, max_length=40)
+
+
+class CodeVerifyIn(BaseModel):
+    """Step 2: username + the 6-digit code the bot DMed."""
+
+    username: str = Field(min_length=3, max_length=40)
+    code: str = Field(pattern=r"^\d{6}$")
 
 
 class DevLoginIn(BaseModel):

@@ -117,6 +117,21 @@ class Report(Base):
     reporter: Mapped[User] = relationship()
 
 
+class LoginCode(Base):
+    """One-time login codes DMed by the bot (OTP auth — replaces the widget).
+
+    Codes are stored HMAC'd, expire quickly, and are single-use."""
+
+    __tablename__ = "login_codes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True, nullable=False)
+    code_hash: Mapped[str] = mapped_column(String, nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+
 class Session(Base):
     __tablename__ = "sessions"
 

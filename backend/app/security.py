@@ -1,16 +1,14 @@
-"""Telegram login verification + opaque session tokens (plan §3).
+"""OTP login codes + opaque session tokens.
 
 There are no passwords anywhere in this system — identity comes from
-Telegram, and the HMAC check below is what proves a login payload really
-came from Telegram and not from an attacker typing JSON into curl.
+Telegram: the bot DMs a one-time code to the account the user claims,
+so entering it proves control of that Telegram account.
 """
 
 import hashlib
 import hmac
 import secrets
-import time
 from datetime import timedelta
-from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session as OrmSession
@@ -18,26 +16,19 @@ from sqlalchemy.orm import Session as OrmSession
 from .config import settings
 from .models import Session, User, utcnow
 
-MAX_AUTH_AGE_SECONDS = 86_400  # 24h — reject replayed old logins (plan §3.4)
+
+def generate_login_code() -> str:
+    """A 6-digit code, cryptographically random."""
+    return f"{secrets.randbelow(900000) + 100000}"
 
 
-def verify_telegram_login(data: dict[str, Any], bot_token: str) -> bool:
-    """Verify a Telegram Login Widget payload. See plan §3 for the algorithm."""
-    data = dict(data)  # don't mutate caller's dict
-    received_hash = data.pop("hash", None)
-    if not received_hash:
-        return False
-    check_string = "\n".join(f"{k}={v}" for k, v in sorted(data.items()))
-    secret_key = hashlib.sha256(bot_token.encode()).digest()
-    computed_hash = hmac.new(secret_key, check_string.encode(), hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(computed_hash, str(received_hash)):
-        return False
-    try:
-        if time.time() - int(data["auth_date"]) > MAX_AUTH_AGE_SECONDS:
-            return False
-    except (KeyError, TypeError, ValueError):
-        return False
-    return True
+def hash_login_code(code: str) -> str:
+    """HMAC with the server secret so a DB leak doesn't expose active codes."""
+    return hmac.new(settings.session_secret.encode(), code.encode(), hashlib.sha256).hexdigest()
+
+
+def verify_login_code(code: str, expected_hash: str) -> bool:
+    return hmac.compare_digest(hash_login_code(code), expected_hash)
 
 
 def _hash_token(token: str) -> str:

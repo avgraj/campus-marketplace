@@ -2,12 +2,9 @@
 so the app picks up a throwaway SQLite DB, a temp upload dir, disabled rate
 limiting, and DEV_MODE for password-less logins."""
 
-import hashlib
-import hmac
 import io
 import os
 import tempfile
-import time
 from pathlib import Path
 
 import pytest
@@ -19,13 +16,16 @@ os.environ["UPLOAD_DIR"] = str(Path(_tmp) / "uploads")
 os.environ["RATE_LIMIT_ENABLED"] = "false"
 os.environ["DEV_MODE"] = "true"
 os.environ["COMMUNITY_NAME"] = "Test Campus"
+os.environ["SESSION_SECRET"] = "test-secret"
+os.environ["TELEGRAM_WEBHOOK_SECRET"] = "wh-secret"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app.main import app  # noqa: E402
 
 CSRF = {"X-Requested-With": "fetch"}
-TEST_BOT_TOKEN = "123456:test-bot-token"
+WH_SECRET = "wh-secret"
+WH_HEADERS = {"X-Telegram-Bot-Api-Secret-Token": WH_SECRET}
 
 
 @pytest.fixture()
@@ -73,11 +73,12 @@ def create_listing(client: TestClient, title: str = "Vintage Study Table", price
     return client.post("/listings", json=payload, headers=CSRF)
 
 
-def sign_telegram_payload(payload: dict, token: str = TEST_BOT_TOKEN) -> dict:
-    """Sign a payload exactly like Telegram would (mirrors plan §3 algorithm)."""
-    data = {k: v for k, v in payload.items() if v is not None}
-    data.setdefault("auth_date", int(time.time()))
-    check_string = "\n".join(f"{k}={v}" for k, v in sorted(data.items()))
-    secret_key = hashlib.sha256(token.encode()).digest()
-    data["hash"] = hmac.new(secret_key, check_string.encode(), hashlib.sha256).hexdigest()
-    return data
+def webhook_start(client: TestClient, telegram_id: int, username: str | None = None, first_name: str = "TestUser"):
+    """Simulate a Telegram user pressing /start on the bot."""
+    payload = {
+        "message": {
+            "text": "/start",
+            "from": {"id": telegram_id, "first_name": first_name, "username": username or None},
+        }
+    }
+    return client.post("/telegram/webhook", json=payload, headers=WH_HEADERS)

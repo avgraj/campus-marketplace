@@ -19,7 +19,7 @@ from starlette.responses import Response
 from .config import settings
 from .database import Base, SessionLocal, engine
 from .rate_limit import limiter
-from .routers import admin, auth, categories, listings, uploads
+from .routers import admin, auth, categories, listings, telegram_webhook, uploads
 from .schemas import PublicConfigOut
 from .seed import seed_categories
 
@@ -62,6 +62,7 @@ def create_app() -> FastAPI:
     app.include_router(listings.router)
     app.include_router(uploads.router)
     app.include_router(admin.router)
+    app.include_router(telegram_webhook.router)
 
     # Working-model image storage: processed files on disk, served back here.
     upload_dir = Path(settings.upload_dir)
