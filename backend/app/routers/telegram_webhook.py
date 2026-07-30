@@ -2,13 +2,15 @@
 press Start. We record the username → telegram_id mapping so the OTP
 login can find them (bots can't resolve @usernames to IDs on their own)."""
 
+from urllib.parse import quote
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session as OrmSession
 
 from ..config import settings
 from ..database import get_db
-from ..models import User
+from ..models import Listing, User
 from ..services import telegram as telegram_service
 
 router = APIRouter(tags=["telegram"])
@@ -48,6 +50,26 @@ def telegram_webhook(
     user.last_name = last_name
     user.telegram_username = username
     db.commit()
+
+    # Contact deep link: /start contact_<listing_id>
+    parts = text.split(maxsplit=1)
+    if len(parts) > 1 and parts[1].startswith("contact_"):
+        try:
+            listing_id = int(parts[1].replace("contact_", ""))
+            listing = db.get(Listing, listing_id)
+            seller = listing and listing.seller
+            if listing and listing.status == "active" and seller and seller.telegram_username:
+                contact_text = f'Hi! I am interested in your listing "{listing.title}" (₹{listing.price}) on Campus Marketplace \u2014 is it still available?'
+                link = f"https://t.me/{seller.telegram_username}?text={quote(contact_text)}"
+                telegram_service.send_message(
+                    telegram_id,
+                    f"Contact seller for: {listing.title} (₹{listing.price})\n\n"
+                    f"Tap to message @{seller.telegram_username}:\n{link}\n\n"
+                    f"Or copy this:\n{contact_text}",
+                )
+                return {"ok": True}
+        except (ValueError, AttributeError):
+            pass
 
     telegram_service.send_message(
         telegram_id,
