@@ -58,8 +58,14 @@ class Settings(BaseSettings):
     # so a cross-site frontend (Vercel → Render) can send it.
     cookie_secure: bool = False
 
-    # Image storage — working model writes to this local dir, served at /uploads.
+    # Image storage — local disk fallback (ephemeral on Render, not persistent).
     upload_dir: str = "uploads"
+    # Supabase Storage for persistent image hosting. When empty, falls back to
+    # local disk. Create a public bucket called "marketplace-images" in your
+    # Supabase project, then set these:
+    storage_bucket_url: str = ""   # e.g. https://xyz.supabase.co/storage/v1
+    storage_api_key: str = ""      # Supabase anon or service_role key
+    storage_bucket: str = "marketplace-images"
 
     # Frontend origin for CORS.
     frontend_origin: str = "http://localhost:5173"
