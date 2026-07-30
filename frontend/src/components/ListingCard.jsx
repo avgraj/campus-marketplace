@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
 import { CONDITION_LABELS, formatDate, formatPrice } from "../format";
+import { imageUrl } from "../api";
 
 export default function ListingCard({ listing }) {
-  const cover = listing.images?.[0]?.url;
+  const cover = imageUrl(listing.images?.[0]?.url);
   return (
     <Link
       to={`/listing/${listing.id}`}

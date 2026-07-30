@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api } from "../api";
+import { api, imageUrl } from "../api";
 import { useAuth } from "../context/AuthContext";
 import EmptyState from "../components/EmptyState";
 import SafetyNote from "../components/SafetyNote";
@@ -83,7 +83,7 @@ export default function ListingDetail() {
         <div className="aspect-square overflow-hidden rounded-lg border border-gray-200 bg-white">
           {images.length ? (
             <img
-              src={images[activeImage]?.url}
+              src={imageUrl(images[activeImage]?.url)}
               alt={listing.title}
               className="h-full w-full object-cover"
             />
@@ -102,7 +102,7 @@ export default function ListingDetail() {
                 }`}
                 aria-label={`Photo ${idx + 1}`}
               >
-                <img src={img.url} alt="" className="h-full w-full object-cover" />
+                <img src={imageUrl(img.url)} alt="" className="h-full w-full object-cover" />
               </button>
             ))}
           </div>

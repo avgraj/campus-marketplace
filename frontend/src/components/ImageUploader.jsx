@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import imageCompression from "browser-image-compression";
-import { api } from "../api";
+import { api, imageUrl } from "../api";
 
 // Client-side compress → server validates/re-encodes/strips EXIF (plan §7).
 const MAX_IMAGES = 5;
@@ -49,7 +49,7 @@ export default function ImageUploader({ urls, onChange }) {
       <div className="flex flex-wrap gap-3">
         {urls.map((url, idx) => (
           <div key={url} className="relative h-24 w-24 overflow-hidden rounded border border-gray-200">
-            <img src={url} alt={`Upload ${idx + 1}`} className="h-full w-full object-cover" />
+            <img src={imageUrl(url)} alt={`Upload ${idx + 1}`} className="h-full w-full object-cover" />
             <button
               type="button"
               onClick={() => removeAt(idx)}

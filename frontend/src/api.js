@@ -30,6 +30,14 @@ async function request(path, { method = "GET", body, formData } = {}) {
   return data;
 }
 
+// Images are served from the backend. Relative paths like /uploads/xxx.webp
+// need the backend origin prepended so they work from the Vercel frontend.
+export function imageUrl(path) {
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  return `${BASE}${path}`;
+}
+
 export const api = {
   get: (path) => request(path),
   post: (path, body) => request(path, { method: "POST", body }),

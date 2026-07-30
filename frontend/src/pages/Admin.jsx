@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api } from "../api";
+import { api, imageUrl } from "../api";
 import EmptyState from "../components/EmptyState";
 import { formatDate, formatPrice } from "../format";
 
@@ -46,7 +46,7 @@ export default function Admin() {
               <Link to={`/listing/${r.listing.id}`} className="flex flex-1 gap-3">
                 {r.listing.images?.[0] && (
                   <img
-                    src={r.listing.images[0].url}
+                    src={imageUrl(r.listing.images[0].url)}
                     alt=""
                     className="h-20 w-20 rounded border border-gray-200 object-cover"
                   />
