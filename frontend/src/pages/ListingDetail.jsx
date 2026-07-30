@@ -35,13 +35,18 @@ export default function ListingDetail() {
     };
   }, [id]);
 
-  // Telegram deep link with a prefilled message (plan §8). The buyer still
-  // has to hit send in Telegram — a small built-in spam brake.
+  // Telegram deep link with a prefilled message (plan §8). Use tg:// on
+  // mobile (opens native app directly) and https://t.me/ on desktop (opens in
+  // browser) — the t.me web page's "Send Message" button often breaks.
   const telegramUrl = useMemo(() => {
     if (!listing?.seller?.telegram_username) return null;
     const text = `Hi! I'm interested in your listing "${listing.title}" (${formatPrice(
       listing.price
     )}) on Campus Marketplace — is it still available?`;
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isMobile) {
+      return `tg://resolve?domain=${listing.seller.telegram_username}&text=${encodeURIComponent(text)}`;
+    }
     return `https://t.me/${listing.seller.telegram_username}?text=${encodeURIComponent(text)}`;
   }, [listing]);
 
@@ -179,8 +184,8 @@ export default function ListingDetail() {
           telegramUrl ? (
             <a
               href={telegramUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+              target={telegramUrl.startsWith("tg:") ? "_self" : "_blank"}
+              rel={telegramUrl.startsWith("tg:") ? "" : "noopener noreferrer"}
               className="inline-flex items-center gap-2 rounded bg-sky-500 px-5 py-2.5 font-medium text-white hover:bg-sky-600"
             >
               <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden>
