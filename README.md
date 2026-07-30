@@ -14,7 +14,7 @@ A listing + discovery site for a closed community (a college / hostel) where mem
 ## Features
 
 - **Browse, search & filter publicly** — no login needed to window-shop (full-text-ish search, category/price/condition filters, sorting, pagination)
-- **Password-less login via Telegram** — HMAC-verified Login Widget payload; there is no password database to breach
+- **Password-less login via Telegram** — the bot DMs a one-time 6-digit code to your account; no passwords or sensitive account access granted
 - **Community trust layer** — the bot checks membership in your campus Telegram group; only verified members can list items or see the *Message Seller* button
 - **Telegram contact redirect** — `t.me/<username>?text=…` with a prefilled message; deals close face-to-face
 - **Safe image pipeline** — client-side compression, server-side re-encode, **EXIF/GPS stripping**, WebP output with size caps
@@ -29,7 +29,7 @@ A listing + discovery site for a closed community (a college / hostel) where mem
 | Frontend | React 19 + Vite 7 + Tailwind 4 |
 | Backend | FastAPI (auto Swagger docs at `/docs`) |
 | Database | SQLAlchemy — SQLite locally, PostgreSQL in prod via `DATABASE_URL` |
-| Auth | Telegram Login Widget + Bot API, opaque session tokens in HttpOnly cookies |
+| Auth | Bot-delivered OTP code + community-group membership check, opaque session tokens in HttpOnly cookies |
 | Images | Pillow (validate → strip EXIF → re-encode WebP); local disk or cloud storage |
 
 ## Quick start (working model, no Telegram needed)
@@ -83,7 +83,8 @@ Copy `.env.example` → `.env` and fill in. Key knobs:
 
 | Variable | Purpose |
 |---|---|
-| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_BOT_USERNAME` | From `@BotFather` (+ `/setdomain` to your frontend) |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_BOT_USERNAME` | From `@BotFather` |
+| `TELEGRAM_WEBHOOK_SECRET` | Shared secret for the webhook endpoint (setWebhook `secret_token`) |
 | `COMMUNITY_GROUP_CHAT_ID` | Group the bot admins; empty = skip membership check (dev) |
 | `DATABASE_URL` | `sqlite:///./campus_marketplace.db` locally; Postgres URL in prod |
 | `FRONTEND_ORIGIN` | CORS-allowed origin (never `*`) |
@@ -92,7 +93,11 @@ Copy `.env.example` → `.env` and fill in. Key knobs:
 
 ## Going to production (free tiers)
 
-1. **Telegram**: create a bot via `@BotFather`, `/setdomain` to your frontend domain, add the bot as admin to your community group, set `TELEGRAM_BOT_*` + `COMMUNITY_GROUP_CHAT_ID`.
+1. **Telegram**: create a bot via `@BotFather`, add it as admin to your community group, set `TELEGRAM_BOT_*` + `COMMUNITY_GROUP_CHAT_ID`. Then set the webhook:
+   ```bash
+   curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<BACKEND_URL>/telegram/webhook&secret_token=<YOUR_SECRET>"
+   ```
+   Add `TELEGRAM_WEBHOOK_SECRET=<YOUR_SECRET>` to your backend env vars.
 2. **Backend** → Render free web service; **DB** → Neon or Supabase Postgres (set `DATABASE_URL`); **images** → Supabase Storage or Cloudinary.
 3. **Frontend** → Vercel Hobby (non-commercial use), set `VITE_API_URL` to the backend URL.
 4. **Edge** → put both domains behind Cloudflare free (DDoS mitigation, rate limiting, Turnstile on login + listing forms).
@@ -102,7 +107,7 @@ Copy `.env.example` → `.env` and fill in. Key knobs:
 
 | Method | Endpoint | Auth | Purpose |
 |---|---|---|---|
-| POST | `/auth/telegram/callback` | none | verify Telegram payload, issue session cookie |
+| POST | `/auth/code/request` · `/auth/code/verify` | none | OTP login: request code → verify code → session issued |
 | POST | `/auth/logout` · GET `/auth/me` | session | session lifecycle |
 | GET | `/categories` · `/listings` · `/listings/{id}` | none | public browse/search/detail |
 | POST | `/listings` · PUT `/listings/{id}` | verified member / owner | create / edit |
@@ -115,7 +120,7 @@ Full interactive docs: run the backend and open **`http://localhost:8000/docs`**
 
 ## Security notes (short version)
 
-- No passwords anywhere → nothing to brute-force. Telegram `hash` is HMAC-verified server-side on every login; `auth_date` older than 24h is rejected (anti-replay).
+- No passwords anywhere → nothing to brute-force. Login is via a one-time 6-digit code that the bot DMs to your account; codes are HMAC-hashed, single-use, and expire in 10 minutes.
 - Sessions are opaque tokens, stored **hashed** in the DB, delivered as `HttpOnly` cookies — revocation is deleting a row.
 - Seller usernames never leave the server for anonymous visitors (contact is gated behind login).
 - Photos are re-encoded from decoded pixels, which strips EXIF/GPS metadata by construction.
